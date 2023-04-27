@@ -84,6 +84,14 @@ struct
     }
 
 
+  fun goto idx (state: parser_state) =
+    { index = idx
+    , qreg = #qreg state
+    , gates = #gates state
+    , numQubitsSoFar = #numQubitsSoFar state
+    }
+
+
   fun declareQReg (name, size) (state: parser_state) =
     if List.exists (fn x => #name x = name) (#qreg state) then
       raise ParseError ("qreg '" ^ name ^ "' declared more than once")
@@ -122,6 +130,10 @@ struct
     , numQubitsSoFar = #numQubitsSoFar state
     , gates = parseGate (gateDesc, lookupQubits state args) :: #gates state
     }
+
+
+  fun takeUpTo k s =
+    Seq.take s (Int.min (Seq.length s, k))
 
 
   fun loadFromFile path =
@@ -172,8 +184,12 @@ struct
           advanceBy 1 state
         else
           raise ParseError
-            ("expected " ^ Char.toString c ^ " but found: "
-             ^ charSeqToString (Seq.drop chars (index state)))
+            ("expected '" ^ Char.toString c ^ "' but found '"
+             ^ charSeqToString (takeUpTo 1 (Seq.drop chars (index state)))
+             ^ "'. context (10 chars before / after):\n"
+             ^
+             charSeqToString (takeUpTo 21 (Seq.drop chars (Int.max
+               (0, index state - 10)))))
 
 
       fun parse_toplevel state =
@@ -194,7 +210,8 @@ struct
           else if isString "reset" state then
             let
               val state = advanceBy 5 state
-              val (state, _) = parse_name state
+              val state = goPastWhitespace state
+              val (state, _) = parse_nameMaybeWithIndex state
               val state = goPastWhitespace state
               val state = expectChar #";" state
             in
@@ -397,6 +414,25 @@ struct
           val state = expectChar #"]" state
         in
           (state, {name = name, index = index})
+        end
+
+
+      and parse_nameMaybeWithIndex state =
+        let
+          val startIndex = index state
+          val state = goPastWhitespace state
+          val (state, name) = parse_name state
+          val state = goPastWhitespace state
+        in
+          if isChar #"[" state then
+            let
+              val (state, {name, index}) = parse_nameWithIndex
+                (goto startIndex state)
+            in
+              (state, {name = name, index = SOME index})
+            end
+          else
+            (state, {name = name, index = NONE})
         end
 
 

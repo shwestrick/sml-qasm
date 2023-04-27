@@ -239,6 +239,23 @@ struct
               parse_toplevel state
             end
 
+          else if isString "measure" state then
+            let
+              (* ignore for now *)
+              val state = advanceBy 7 state
+              val state = goPastWhitespace state
+              val (state, _) = parse_nameWithIndex state
+              val state = goPastWhitespace state
+              val state =
+                if isString "->" state then advanceBy 2 state
+                else raise ParseError ("invalid measure")
+              val state = goPastWhitespace state
+              val (state, _) = parse_nameWithIndex state
+              val state = goPastChar #";" state
+            in
+              parse_toplevel state
+            end
+
           else
             parse_toplevel (parse_gateAndArgs state)
         end

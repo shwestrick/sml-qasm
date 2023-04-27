@@ -52,6 +52,8 @@ struct
       | (GateName "t", 1) => Gate.T (getArg 0)
       | (GateName "x", 1) => Gate.X (getArg 0)
       | (GateName "cx", 2) => Gate.CX {control = getArg 0, target = getArg 1}
+      | (GateName "ccx", 3) =>
+          Gate.CCX {control1 = getArg 0, control2 = getArg 1, target = getArg 2}
       | (GateNameAndArg ("cphase", realexp), 2) =>
           Gate.CPhase
             {control = getArg 0, target = getArg 1, rot = RealExp.eval realexp}

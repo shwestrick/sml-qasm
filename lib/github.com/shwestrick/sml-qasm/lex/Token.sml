@@ -19,26 +19,26 @@ sig
   | Reset
   | Measure
   | Barrier
-  | LeftBracket (* [ *)
-  | RightBracket (* ] *)
-  | LeftParen (* ( *)
-  | RightParen (* ) *)
-  | LeftBrace (* { *)
-  | RightBrace (* } *)
+  | OpenBracket (* [ *)
+  | CloseBracket (* ] *)
+  | OpenParen (* ( *)
+  | CloseParen (* ) *)
+  | OpenBrace (* { *)
+  | CloseBrace (* } *)
   | Colon (* : *)
   | Semicolon (* ; *)
   | Dot (* . *)
   | Comma (* , *)
   | Equals (* = *)
   | Arrow (* -> *)
+  | Slash (* / *)
+  | Minus (* - *)
 
   (*
   | Plus (* + *)
   | DoublePlus (* ++ *)
-  | Minus (* - *)
   | Asterisk (* * *)
   | DoubleAsterisk (* ** *)
-  | Slash (* / *)
   | Percent (* % *)
   | Pipe (* | *)
   | DoublePipe (* || *)
@@ -148,18 +148,20 @@ struct
   | Reset
   | Measure
   | Barrier
-  | LeftBracket (* [ *)
-  | RightBracket (* ] *)
-  | LeftParen (* ( *)
-  | RightParen (* ) *)
-  | LeftBrace (* { *)
-  | RightBrace (* } *)
+  | OpenBracket (* [ *)
+  | CloseBracket (* ] *)
+  | OpenParen (* ( *)
+  | CloseParen (* ) *)
+  | OpenBrace (* { *)
+  | CloseBrace (* } *)
   | Colon (* : *)
   | Semicolon (* ; *)
   | Dot (* . *)
   | Comma (* , *)
   | Equals (* = *)
   | Arrow (* -> *)
+  | Slash (* / *)
+  | Minus (* - *)
 
   datatype class =
     LineComment
@@ -238,18 +240,20 @@ struct
       | "reset" => r Reset
       | "measure" => r Measure
       | "barrier" => r Barrier
-      | "[" => r LeftBracket
-      | "]" => r RightBracket
-      | "(" => r LeftParen
-      | ")" => r RightParen
-      | "{" => r LeftBrace
-      | "}" => r RightBrace
+      | "[" => r OpenBracket
+      | "]" => r CloseBracket
+      | "(" => r OpenParen
+      | ")" => r CloseParen
+      | "{" => r OpenBrace
+      | "}" => r CloseBrace
       | ":" => r Colon
       | ";" => r Semicolon
       | "." => r Dot
       | "," => r Comma
       | "=" => r Equals
       | "->" => r Arrow
+      | "/" => r Slash
+      | "-" => r Minus
 
       | _ => NONE (* (print ("not reserved: " ^ other ^ "\n"); NONE) *)
     end
@@ -266,18 +270,20 @@ struct
     | Reset => "reset"
     | Measure => "measure"
     | Barrier => "barrier"
-    | LeftBracket => "["
-    | RightBracket => "]"
-    | LeftParen => "("
-    | RightParen => ")"
-    | LeftBrace => "{"
-    | RightBrace => "}"
+    | OpenBracket => "["
+    | CloseBracket => "]"
+    | OpenParen => "("
+    | CloseParen => ")"
+    | OpenBrace => "{"
+    | CloseBrace => "}"
     | Colon => ":"
     | Semicolon => ";"
     | Dot => "."
     | Comma => ","
     | Equals => "="
     | Arrow => "->"
+    | Slash => "/"
+    | Minus => "-"
 
 
   fun reservedOrIdentifier src =

@@ -1,11 +1,11 @@
 local
   $(SML_LIB)/basis/basis.mlb
   ../base/sources.mlton.mlb
-  (* LexUtils.sml *)
+  LexUtils.sml
   Token.sml
-  (* Lexer.sml *)
+  Lexer.sml
 in
-  (* structure LexUtils *)
+  structure LexUtils
   structure Token
-  (* structure Lexer *)
+  structure Lexer
 end

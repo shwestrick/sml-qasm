@@ -1,6 +1,8 @@
 local
   $(SML_LIB)/basis/basis.mlb
   ../../mpllang/mpllib/sources.mlton.mlb
+  lex/sources.mlton.mlb
+  syntax-highlighting/sources.mlton.mlb
   Gate.sml
   Circuit.sml
   ParseQASM.sml
@@ -8,4 +10,7 @@ in
   structure Gate
   structure Circuit
   structure ParseQASM
+
+  structure Lexer
+  structure SyntaxHighlighter
 end

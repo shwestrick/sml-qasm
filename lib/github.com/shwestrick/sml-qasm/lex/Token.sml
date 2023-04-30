@@ -27,7 +27,6 @@ sig
   | CloseBrace (* } *)
   | Colon (* : *)
   | Semicolon (* ; *)
-  | Dot (* . *)
   | Comma (* , *)
   | Equals (* = *)
   | Arrow (* -> *)
@@ -156,7 +155,6 @@ struct
   | CloseBrace (* } *)
   | Colon (* : *)
   | Semicolon (* ; *)
-  | Dot (* . *)
   | Comma (* , *)
   | Equals (* = *)
   | Arrow (* -> *)
@@ -248,7 +246,6 @@ struct
       | "}" => r CloseBrace
       | ":" => r Colon
       | ";" => r Semicolon
-      | "." => r Dot
       | "," => r Comma
       | "=" => r Equals
       | "->" => r Arrow
@@ -278,7 +275,6 @@ struct
     | CloseBrace => "}"
     | Colon => ":"
     | Semicolon => ";"
-    | Dot => "."
     | Comma => ","
     | Equals => "="
     | Arrow => "->"

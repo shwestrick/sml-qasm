@@ -34,7 +34,7 @@ struct
     | Token.BinaryIntegerLiteral => TCS.foreground lightblue
     | Token.OctalIntegerLiteral => TCS.foreground lightblue
     | Token.HexIntegerLiteral => TCS.foreground lightblue
-    | Token.FloatLiteral => TCS.foreground green
+    | Token.FloatLiteral => TCS.foreground purple
     | Token.Reserved _ => TCS.bold o TCS.foreground blue
     | Token.Identifier => TCS.foreground darkgreen
     | Token.Whitespace => TCS.clear

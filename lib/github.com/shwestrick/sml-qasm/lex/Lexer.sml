@@ -64,6 +64,37 @@ struct
         in (128 <= i andalso i <= 253) (* ?? *)
         end
 
+      (* Valid unicode chars according to OpenQASM are
+       *   [\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}]
+       *
+       * This is regex syntax. Here's what they mean, according to 
+       * https://www.regular-expressions.info/unicode.html:
+       *   \p{Lu} - an uppercase letter that has a lowercase variant
+       *   \p{Ll} - a lowercase letter that has an uppercase variant
+       *   \p{Lt} - a letter that appears at the start of a word when only the
+       *            first letter of the word is capitalized
+       *   \p{Lm} - a special character that is used like a letter
+       *   \p{Lo} - a letter or ideograph that does not have lowercase and
+       *            uppercase variants
+       *   \p{Nl} - a number that looks like a letter, such as a Roman numeral
+       *
+       * Leaving a TODO for now to come back to this...
+       *)
+
+      fun tryAdvancePastFirstCharacterOfIdentifier s =
+        if is #"_" at s then
+          SOME (s + 1)
+        else if check LexUtils.isLetter at s then
+          SOME (s + 1)
+        else if check isMaybeUnicode at s then
+          error
+            { pos = slice (s, s + 1)
+            , what = "TODO: Unicode support..."
+            , explain = NONE
+            }
+        else
+          NONE
+
       (** ====================================================================
         * STATE MACHINE
         *
@@ -107,16 +138,27 @@ struct
           | c =>
               if LexUtils.isDecDigit c then
                 loop_decIntegerLiteralAfterDigit (s + 1) {constStart = s}
-              else if LexUtils.isLetter c then
-                error {pos = slice (s, s + 1), what = "TODO", explain = NONE}
               else if Char.isSpace c then
                 loop_whitespace {start = s} (s + 1)
               else
-                error
-                  { pos = slice (s, s + 1)
-                  , what = "Unexpected character."
-                  , explain = SOME "Perhaps from unsupported character-set?"
-                  }
+                case tryAdvancePastFirstCharacterOfIdentifier s of
+                  SOME s' => loop_identifier s' {idStart = s}
+                | NONE =>
+                    error
+                      { pos = slice (s, s + 1)
+                      , what = "Unexpected character."
+                      , explain = SOME "Perhaps from unsupported character-set?"
+                      }
+
+
+      and loop_identifier s (args as {idStart}) =
+        if check LexUtils.isDecDigit at s then
+          loop_identifier (s + 1) args
+        else
+          case tryAdvancePastFirstCharacterOfIdentifier s of
+            SOME s' => loop_identifier s' args
+          | NONE =>
+              success (Token.Pretoken.reservedOrIdentifier (slice (idStart, s)))
 
 
       and loop_inString s (args as {stringStart, firstChar}) =
@@ -133,10 +175,17 @@ struct
 
 
       and loop_afterDot s =
-        if check LexUtils.isDecDigit (s + 1) then
+        if
+          check LexUtils.isDecDigit s
+          andalso not (check LexUtils.isDecDigit (s - 2))
+        then
           loop_floatLiteral (s + 1) {constStart = s - 1}
         else
-          success (mkr Token.Dot (s, s + 1))
+          error
+            { pos = slice (s - 1, s)
+            , what = "Unexpected character."
+            , explain = NONE
+            }
 
 
       and loop_whitespace {start} i =
@@ -270,14 +319,14 @@ struct
         else
           error
             { pos = slice (constStart, s)
-            , what = "Invalid real constant."
+            , what = "Invalid float literal."
             , explain = SOME
                 "After the dot, there needs to be at least one decimal digit."
             }
 
 
-      (** Parsing the remainder of a real constant. This is already after the
-        * dot, because the front of the real constant was already parsed as
+      (** Parsing the remainder of a float literal. This is already after the
+        * dot, because the front of the float literal was already parsed as
         * an integer constant.
         *)
       and loop_floatLiteral s (args as {constStart}) =
@@ -289,15 +338,28 @@ struct
           success (mk Token.FloatLiteral (constStart, s))
 
 
-      (** Immediately after the "E" or "e", there might be a twiddle,
+      (** Immediately after the "E" or "e", there might be + or -,
         * and then a bunch of decimal digits.
         *)
       and loop_floatLiteralAfterExponent s {constStart} =
         let
-          fun walkThroughDigits i =
-            if check LexUtils.isDecDigit at i then walkThroughDigits (i + 1)
+          fun walkExpectDigit i =
+            if check LexUtils.isDecDigit at i then
+              walk (i + 1)
+            else
+              error
+                { pos = slice (constStart, i)
+                , what = "Incomplete float literal."
+                , explain = SOME "Expected to see a decimal digit next."
+                }
+
+          and walk i =
+            if is #"_" at i then walkExpectDigit (i + 1)
+            else if check LexUtils.isDecDigit at i then walk (i + 1)
             else i
-          val s' = walkThroughDigits (if is #"~" at s then s + 1 else s)
+
+          val s' = walkExpectDigit
+            (if is #"-" at s orelse is #"+" at s then s + 1 else s)
         in
           success (mk Token.FloatLiteral (constStart, s'))
         end

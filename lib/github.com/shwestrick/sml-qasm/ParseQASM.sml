@@ -9,12 +9,17 @@ struct
 
   structure RealExp =
   struct
-    datatype t = LiteralPi | Slash of t * t | LiteralNum of char Seq.t
+    datatype t =
+      LiteralPi
+    | Slash of t * t
+    | LiteralNum of char Seq.t
+    | Neg of t
 
     fun eval exp =
       case exp of
         LiteralPi => Math.pi
       | Slash (e1, e2) => eval e1 / eval e2
+      | Neg e => ~(eval e)
       | LiteralNum x =>
           case Parse.parseReal x of
             NONE =>
@@ -57,6 +62,8 @@ struct
       | (GateNameAndArg ("cphase", realexp), 2) =>
           Gate.CPhase
             {control = getArg 0, target = getArg 1, rot = RealExp.eval realexp}
+      | (GateNameAndArg ("rz", realexp), 1) =>
+          Gate.RZ {rot = RealExp.eval realexp, target = getArg 0}
       | (GateName name, _) => err name
       | (GateNameAndArg (name, _), _) => err name
     end
@@ -220,10 +227,19 @@ struct
 
           else if isString "barrier" state then
             let
+              fun loop state =
+                let
+                  val state = goPastWhitespace state
+                  val (state, _) = parse_nameMaybeWithIndex state
+                  val state = goPastWhitespace state
+                in
+                  if isChar #";" state then advanceBy 1 state
+                  else if isChar #"," state then loop (advanceBy 1 state)
+                  else raise ParseError "invalid barrier"
+                end
+
               val state = advanceBy 7 state
-              val (state, _) = parse_name state
-              val state = goPastWhitespace state
-              val state = expectChar #";" state
+              val state = loop state
             in
               parse_toplevel state
             end
@@ -322,6 +338,18 @@ struct
             in
               if index state >= numChars then
                 raise ParseError "unexpected end of real expression"
+              else if isChar #"-" state then
+                let
+                  val state = advanceBy 1 state
+                  val (state, x) = parse_realExp state
+                  val _ =
+                    if Option.isSome acc then
+                      raise ParseError ("could not parse real expression")
+                    else
+                      ()
+                in
+                  (state, SOME (RealExp.Neg x))
+                end
               else if isChar #")" state then
                 (state, acc)
               else if isString "pi" state then

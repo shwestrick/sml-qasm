@@ -32,11 +32,11 @@ sig
   | Arrow (* -> *)
   | Slash (* / *)
   | Minus (* - *)
+  | Asterisk (* * *)
+  | Plus (* + *)
 
   (*
-  | Plus (* + *)
   | DoublePlus (* ++ *)
-  | Asterisk (* * *)
   | DoubleAsterisk (* ** *)
   | Percent (* % *)
   | Pipe (* | *)
@@ -160,6 +160,8 @@ struct
   | Arrow (* -> *)
   | Slash (* / *)
   | Minus (* - *)
+  | Asterisk (* * *)
+  | Plus (* + *)
 
   datatype class =
     LineComment
@@ -251,6 +253,8 @@ struct
       | "->" => r Arrow
       | "/" => r Slash
       | "-" => r Minus
+      | "*" => r Asterisk
+      | "+" => r Plus
 
       | _ => NONE (* (print ("not reserved: " ^ other ^ "\n"); NONE) *)
     end
@@ -280,6 +284,8 @@ struct
     | Arrow => "->"
     | Slash => "/"
     | Minus => "-"
+    | Asterisk => "*"
+    | Plus => "+"
 
 
   fun reservedOrIdentifier src =

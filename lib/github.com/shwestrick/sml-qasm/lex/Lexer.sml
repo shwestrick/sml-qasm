@@ -123,6 +123,8 @@ struct
           | #"." => loop_afterDot (s + 1)
           | #"," => success (mkr Token.Comma (s, s + 1))
           | #"=" => success (mkr Token.Equals (s, s + 1))
+          | #"*" => success (mkr Token.Asterisk (s, s + 1))
+          | #"+" => success (mkr Token.Plus (s, s + 1))
           | #"-" =>
               if is #">" at s + 1 then success (mkr Token.Arrow (s, s + 2))
               else success (mkr Token.Minus (s, s + 1))

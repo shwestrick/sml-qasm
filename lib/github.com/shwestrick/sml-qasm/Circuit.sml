@@ -49,6 +49,22 @@ struct
         | Gate.RY {rot, target} => "ry(" ^ rtos rot ^ ") " ^ qi target
         | Gate.CSwap {control, target1, target2} =>
             "cswap " ^ qi control ^ ", " ^ qi target1 ^ ", " ^ qi target2
+        | Gate.Other {name, params, args} =>
+            let
+              val paramstring =
+                case params of
+                  NONE => " "
+                | SOME ps =>
+                    "("
+                    ^
+                    Seq.iterate (fn (acc, x) => acc ^ ", " ^ rtos x)
+                      (rtos (Seq.nth ps 0)) (Seq.drop ps 1) ^ ") "
+            in
+              name ^ paramstring
+              ^
+              Seq.iterate (fn (acc, x) => acc ^ ", " ^ qi x)
+                (qi (Seq.nth args 0)) (Seq.drop args 1)
+            end
     in
       Seq.iterate op^ header (Seq.map (fn g => gateToString g ^ ";\n") gates)
     end

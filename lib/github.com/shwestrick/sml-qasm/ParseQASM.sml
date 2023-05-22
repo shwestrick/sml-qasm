@@ -12,6 +12,7 @@ struct
     datatype t =
       LiteralPi
     | Slash of t * t
+    | Mult of t * t
     | LiteralNum of char Seq.t
     | Neg of t
 
@@ -19,6 +20,7 @@ struct
       case exp of
         LiteralPi => Math.pi
       | Slash (e1, e2) => eval e1 / eval e2
+      | Mult (e1, e2) => eval e1 * eval e2
       | Neg e => ~(eval e)
       | LiteralNum x =>
           case Parse.parseReal x of
@@ -36,7 +38,7 @@ struct
    *)
   datatype gate_desc =
     GateName of string
-  | GateNameAndArg of string * RealExp.t
+  | GateNameAndArgs of string * (RealExp.t Seq.t)
 
   (* see e.g.
    * https://github.com/Qiskit/qiskit-terra/blob/main/qiskit/qasm/libs/qelib1.inc
@@ -59,20 +61,27 @@ struct
       | (GateName "cx", 2) => Gate.CX {control = getArg 0, target = getArg 1}
       | (GateName "ccx", 3) =>
           Gate.CCX {control1 = getArg 0, control2 = getArg 1, target = getArg 2}
-      | (GateNameAndArg ("cphase", realexp), 2) =>
+      | (GateNameAndArgs ("cphase", params), 2) =>
           Gate.CPhase
-            {control = getArg 0, target = getArg 1, rot = RealExp.eval realexp}
-      | (GateNameAndArg ("rz", realexp), 1) =>
-          Gate.RZ {rot = RealExp.eval realexp, target = getArg 0}
-      | (GateNameAndArg ("ry", realexp), 1) =>
-          Gate.RY {rot = RealExp.eval realexp, target = getArg 0}
+            { control = getArg 0
+            , target = getArg 1
+            , rot = RealExp.eval (Seq.nth params 0)
+            }
+      | (GateNameAndArgs ("rz", params), 1) =>
+          Gate.RZ {rot = RealExp.eval (Seq.nth params 0), target = getArg 0}
+      | (GateNameAndArgs ("ry", params), 1) =>
+          Gate.RY {rot = RealExp.eval (Seq.nth params 0), target = getArg 0}
       | (GateName "cswap", 3) =>
           Gate.CSwap
             {control = getArg 0, target1 = getArg 1, target2 = getArg 2}
       | (GateName name, _) =>
-          Gate.Other {name=name, params=NONE, args = args}
-      | (GateNameAndArg (name, param), _) =>
-          Gate.Other {name=name, params = SOME (Seq.singleton (RealExp.eval param)), args = args}
+          Gate.Other {name = name, params = NONE, args = args}
+      | (GateNameAndArgs (name, params), _) =>
+          Gate.Other
+            { name = name
+            , params = SOME (Seq.map RealExp.eval params)
+            , args = args
+            }
     end
 
   fun charSeqToString s =
@@ -327,12 +336,23 @@ struct
           else
             let
               val state = advanceBy 1 state
-              val (state, exp) = parse_realExp state
+              val (state, exps) = parse_realExpList [] state
               val state = goPastWhitespace state
               val state = expectChar #")" state
             in
-              (state, GateNameAndArg (name, exp))
+              (state, GateNameAndArgs (name, exps))
             end
+        end
+
+
+      and parse_realExpList acc state =
+        let
+          val state = goPastWhitespace state
+          val (state, exp) = parse_realExp state
+          val acc = exp :: acc
+        in
+          if isChar #"," state then parse_realExpList acc (advanceBy 1 state)
+          else (state, Seq.fromRevList acc)
         end
 
 
@@ -359,6 +379,8 @@ struct
                 end
               else if isChar #")" state then
                 (state, acc)
+              else if isChar #"," state then
+                (state, acc)
               else if isString "pi" state then
                 if Option.isSome acc then
                   raise ParseError ("could not parse real expression")
@@ -373,6 +395,18 @@ struct
                       NONE =>
                         raise ParseError ("could not parse real expression")
                     | SOME xx => SOME (RealExp.Slash (xx, yy))
+                in
+                  loop acc state
+                end
+              else if isChar #"*" state then
+                let
+                  val state = advanceBy 1 state
+                  val (state, yy) = parse_realExp state
+                  val acc =
+                    case acc of
+                      NONE =>
+                        raise ParseError ("could not parse real expression")
+                    | SOME xx => SOME (RealExp.Mult (xx, yy))
                 in
                   loop acc state
                 end

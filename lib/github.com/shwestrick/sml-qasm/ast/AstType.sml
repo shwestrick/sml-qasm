@@ -103,15 +103,12 @@ struct
 
 
   (* ====================================================================== *)
-  structure Ast =
-  struct
+  datatype ast =
+    Ast of
+      { version: {openqasm: Token.t, version: Token.t, semicolon: Token.t} option
+      , stmts: Stmt.t Seq.t
+      }
 
-    datatype ast =
-      Ast of
-        { version: {openqasm: Token.t, version: Token.t, semicolon: Token.t} option
-        , stmts: Stmt.t Seq.t
-        }
-
-  end
+  type t = ast
 
 end

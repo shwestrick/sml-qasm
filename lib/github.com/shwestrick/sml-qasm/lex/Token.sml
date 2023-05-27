@@ -113,6 +113,8 @@ sig
   val isWhitespace: token -> bool
   val isCommentOrWhitespace: token -> bool
 
+  val isVersionIdentifier: token -> bool
+
   (** Tokens have to be constructed from a group of "pretokens". This makes it
     * possible to implement functions like nextToken and prevToken, above.
     *)
@@ -320,6 +322,28 @@ struct
     | _ => false
 
   fun isCommentOrWhitespace tok = isComment tok orelse isWhitespace tok
+
+  fun isVersionIdentifier tok =
+    let
+      val src = getSource tok
+
+      fun okayClass () =
+        case getClass tok of
+          FloatLiteral => true
+        | DecimalIntegerLiteral => true
+        | _ => false
+
+      fun okayStuff () =
+        Source.length src >= 1 andalso LexUtils.isDecDigit (Source.nth src 0)
+        andalso
+        Util.all (0, Source.length src) (fn i =>
+          let val c = Source.nth src i
+          in LexUtils.isDecDigit c orelse c = #"."
+          end)
+    in
+      okayClass () andalso okayStuff ()
+    end
+
 
   fun classToString class =
     case class of

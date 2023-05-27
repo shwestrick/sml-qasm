@@ -60,6 +60,8 @@ fun exnToString exn =
 val _ =
   let
     val source = Source.loadFromFile (FilePath.fromUnixPath inputName)
+    val tokens = Lexer.tokens source handle exn => handleLexOrParseError exn
+    val ast = Parser.parse tokens handle exn => handleLexOrParseError exn
     val highlighted = SyntaxHighlighter.highlight source
                       handle exn => handleLexOrParseError exn
   in

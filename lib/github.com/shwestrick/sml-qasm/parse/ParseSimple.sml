@@ -11,7 +11,7 @@ sig
   type 'a peeker = 'a ParserCombinators.peeker
   type tokens = Token.t Seq.t
 
-  val ident: tokens -> (int, Token.t) parser
+  val identifier: tokens -> (int, Token.t) parser
   val reserved: tokens -> Token.reserved -> (int, Token.t) parser
   val maybeReserved: tokens -> Token.reserved -> (int, Token.t option) parser
 end =
@@ -35,7 +35,7 @@ struct
     check toks (fn t => Token.Reserved rc = Token.getClass t) i
 
 
-  fun ident toks i =
+  fun identifier toks i =
     if check toks Token.isIdentifier i then
       (i + 1, Seq.nth toks i)
     else

@@ -38,7 +38,7 @@ struct
       fun isReserved rc =
         check (fn t => Token.Reserved rc = Token.getClass t)
 
-      fun parse_ident i = PS.ident toks i
+      fun parse_identifier i = PS.identifier toks i
       fun parse_reserved rc i =
         PS.reserved toks rc i
       fun parse_maybeReserved rc i =
@@ -46,6 +46,8 @@ struct
 
       fun parse_oneOrMoreDelimitedByReserved x i =
         PC.oneOrMoreDelimitedByReserved toks x i
+      fun parse_zeroOrMoreDelimitedByReserved x i =
+        PC.zeroOrMoreDelimitedByReserved toks x i
       fun parse_two (p1, p2) state =
         PC.two (p1, p2) state
       fun parse_zeroOrMoreWhile c p s =
@@ -61,6 +63,88 @@ struct
         if check Token.isIdentifier i then (i + 1, Ast.Exp.Identifier (tok i))
         else if check Token.isLiteral i then (i + 1, Ast.Exp.Literal (tok i))
         else nyi "parse_exp" i
+
+
+      fun parse_maybeDesignator i =
+        if not (isReserved Token.OpenBracket i) then
+          (i, NONE)
+        else
+          let
+            val (i, lbracket) = (i + 1, tok i)
+            val (i, exp) = parse_exp i
+            val (i, rbracket) = parse_reserved Token.CloseBracket i
+          in
+            (i, SOME {lbracket = lbracket, exp = exp, rbracket = rbracket})
+          end
+
+
+      fun parse_maybeParams i =
+        if not (isReserved Token.OpenParen i) then
+          (i, NONE)
+        else
+          let
+            val (i, lparen) = (i + 1, tok i)
+            val (i, {elems, delims}) =
+              parse_zeroOrMoreDelimitedByReserved
+                { parseElem = parse_exp
+                , delim = Token.Comma
+                , shouldStop = isReserved Token.CloseParen
+                } i
+            val (i, rparen) = parse_reserved Token.CloseParen i
+          in
+            ( i
+            , SOME
+                { lparen = lparen
+                , elems = elems
+                , delims = delims
+                , rparen = rparen
+                }
+            )
+          end
+
+
+      fun parse_gateOperand i =
+        let
+          val (i, name) = parse_identifier i
+          val (i, index) = parse_maybeDesignator i
+        in
+          (i, Ast.Stmt.IndexedIdentifier {name = name, index = index})
+        end
+
+
+      fun parse_gateOperands i =
+        let
+          fun stop i =
+            isReserved Token.Semicolon i
+            orelse
+            (isReserved Token.Comma i andalso isReserved Token.Semicolon (i + 1))
+
+          val (i, args) =
+            parse_zeroOrMoreDelimitedByReserved
+              { parseElem = parse_gateOperand
+              , delim = Token.Comma
+              , shouldStop = stop
+              } i
+        in
+          (i, args)
+        end
+
+
+      (* name [(exp, ...)] operand, ...
+       *     ^
+       *)
+      fun parse_gateCall i =
+        let
+          val name = tok (i - 1)
+          val (i, params) = parse_maybeParams i
+          val (i, args) = parse_gateOperands i
+          val (i, semicolon) = parse_reserved Token.Semicolon i
+        in
+          ( i
+          , Ast.Stmt.GateCall
+              {name = name, params = params, args = args, semicolon = semicolon}
+          )
+        end
 
 
       (* include "path..." ;
@@ -84,19 +168,6 @@ struct
         end
 
 
-      fun parse_maybeDesignator i =
-        if not (isReserved Token.OpenBracket i) then
-          (i, NONE)
-        else
-          let
-            val (i, lbracket) = (i + 1, tok i)
-            val (i, exp) = parse_exp i
-            val (i, rbracket) = parse_reserved Token.CloseBracket i
-          in
-            (i, SOME {lbracket = lbracket, exp = exp, rbracket = rbracket})
-          end
-
-
       (* reg id designator? ;
        *    ^ 
        * e.g.
@@ -106,7 +177,7 @@ struct
       fun parse_oldStyleDeclare i =
         let
           val reg = tok (i - 1)
-          val (i, ident) = parse_ident i
+          val (i, ident) = parse_identifier i
           val (i, designator) = parse_maybeDesignator i
           val (i, semicolon) = parse_reserved Token.Semicolon i
         in
@@ -126,6 +197,8 @@ struct
           parse_include (i + 1)
         else if isReserved Token.Qreg i orelse isReserved Token.Creg i then
           parse_oldStyleDeclare (i + 1)
+        else if check Token.isIdentifier i then
+          parse_gateCall (i + 1)
         else
           nyi "parse_stmt" i
 

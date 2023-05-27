@@ -38,6 +38,7 @@ struct
       fun isReserved rc =
         check (fn t => Token.Reserved rc = Token.getClass t)
 
+      fun parse_ident i = PS.ident toks i
       fun parse_reserved rc i =
         PS.reserved toks rc i
       fun parse_maybeReserved rc i =
@@ -56,7 +57,77 @@ struct
       (* =================================================================== *)
 
 
-      fun parse_stmt i = nyi "parse_stmt" i
+      fun parse_exp i =
+        if check Token.isIdentifier i then (i + 1, Ast.Exp.Identifier (tok i))
+        else if check Token.isLiteral i then (i + 1, Ast.Exp.Literal (tok i))
+        else nyi "parse_exp" i
+
+
+      (* include "path..." ;
+       *        ^ 
+       *)
+      fun parse_include i =
+        let
+          val includee = tok (i - 1)
+          val (i, path) =
+            if check Token.isStringLiteral i then
+              (i + 1, tok i)
+            else
+              ParserUtils.tokError toks
+                {pos = i, what = "Expected string literal.", explain = NONE}
+          val (i, semicolon) = parse_reserved Token.Semicolon i
+        in
+          ( i
+          , Ast.Stmt.Include
+              {includee = includee, path = path, semicolon = semicolon}
+          )
+        end
+
+
+      fun parse_maybeDesignator i =
+        if not (isReserved Token.OpenBracket i) then
+          (i, NONE)
+        else
+          let
+            val (i, lbracket) = (i + 1, tok i)
+            val (i, exp) = parse_exp i
+            val (i, rbracket) = parse_reserved Token.CloseBracket i
+          in
+            (i, SOME {lbracket = lbracket, exp = exp, rbracket = rbracket})
+          end
+
+
+      (* reg id designator? ;
+       *    ^ 
+       * e.g.
+       *   qreg x[5];
+       *   creg y;
+       *)
+      fun parse_oldStyleDeclare i =
+        let
+          val reg = tok (i - 1)
+          val (i, ident) = parse_ident i
+          val (i, designator) = parse_maybeDesignator i
+          val (i, semicolon) = parse_reserved Token.Semicolon i
+        in
+          ( i
+          , Ast.Stmt.OldStyleDeclare
+              { reg = reg
+              , ident = ident
+              , designator = designator
+              , semicolon = semicolon
+              }
+          )
+        end
+
+
+      fun parse_stmt i =
+        if isReserved Token.Include i then
+          parse_include (i + 1)
+        else if isReserved Token.Qreg i orelse isReserved Token.Creg i then
+          parse_oldStyleDeclare (i + 1)
+        else
+          nyi "parse_stmt" i
 
 
       (*  OPENQASM version ;
@@ -74,8 +145,8 @@ struct
               else
                 ParserUtils.tokError toks
                   { pos = i
-                  , what = "Unexpected token."
-                  , explain = SOME "Expected version identifier."
+                  , what = "Invalid version identifier."
+                  , explain = NONE
                   }
 
             val (i, semicolon) = parse_reserved Token.Semicolon i

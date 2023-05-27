@@ -109,6 +109,8 @@ sig
 
   val isReserved: token -> bool
   val isStringLiteral: token -> bool
+  val isIdentifier: token -> bool
+  val isLiteral: token -> bool
   val isComment: token -> bool
   val isWhitespace: token -> bool
   val isCommentOrWhitespace: token -> bool
@@ -298,6 +300,24 @@ struct
   fun isReserved (tok: token) =
     case getClass tok of
       Reserved _ => true
+    | _ => false
+
+  fun isIdentifier tok =
+    case getClass tok of
+      Identifier => true
+    | _ => false
+
+  fun isLiteral tok =
+    case getClass tok of
+      BinaryIntegerLiteral => true
+    | OctalIntegerLiteral => true
+    | DecimalIntegerLiteral => true
+    | HexIntegerLiteral => true
+    | ImaginaryLiteral => true
+    | FloatLiteral => true
+    | StringLiteral => true
+    | TimingLiteral => true
+    | BooleanLiteral => true
     | _ => false
 
   fun isStringLiteral tok =

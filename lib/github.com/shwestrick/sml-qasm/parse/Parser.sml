@@ -240,6 +240,16 @@ struct
         end
 
 
+      fun parse_reset i =
+        let
+          val reset = tok (i - 1)
+          val (i, arg) = parse_operand i
+          val (i, semicolon) = parse_reserved Token.Semicolon i
+        in
+          (i, Ast.Stmt.Reset {reset = reset, arg = arg, semicolon = semicolon})
+        end
+
+
       fun parse_stmt i =
         if isReserved Token.Include i then
           parse_include (i + 1)
@@ -249,6 +259,8 @@ struct
           parse_measure (i + 1)
         else if isReserved Token.Barrier i then
           parse_barrier (i + 1)
+        else if isReserved Token.Reset i then
+          parse_reset (i + 1)
         else if check Token.isIdentifier i then
           parse_gateCall (i + 1)
         else

@@ -103,7 +103,7 @@ struct
           end
 
 
-      fun parse_gateOperand i =
+      fun parse_operand i =
         let
           val (i, name) = parse_identifier i
           val (i, index) = parse_maybeDesignator i
@@ -112,7 +112,7 @@ struct
         end
 
 
-      fun parse_gateOperands i =
+      fun parse_operands i =
         let
           fun stop i =
             isReserved Token.Semicolon i
@@ -121,7 +121,7 @@ struct
 
           val (i, args) =
             parse_zeroOrMoreDelimitedByReserved
-              { parseElem = parse_gateOperand
+              { parseElem = parse_operand
               , delim = Token.Comma
               , shouldStop = stop
               } i
@@ -137,7 +137,7 @@ struct
         let
           val name = tok (i - 1)
           val (i, params) = parse_maybeParams i
-          val (i, args) = parse_gateOperands i
+          val (i, args) = parse_operands i
           val (i, semicolon) = parse_reserved Token.Semicolon i
         in
           ( i
@@ -192,11 +192,63 @@ struct
         end
 
 
+      (* measure operand [-> operand] ;
+       *        ^ 
+       *)
+      fun parse_measure i =
+        let
+          val measure = tok (i - 1)
+          val (i, arg) = parse_operand i
+          val (i, into) =
+            if not (isReserved Token.Arrow i) then
+              (i, NONE)
+            else
+              let
+                val (i, arrow) = (i + 1, tok i)
+                val (i, arg) = parse_operand i
+              in
+                (i, SOME {arrow = arrow, arg = arg})
+              end
+
+          val (i, semicolon) = parse_reserved Token.Semicolon i
+        in
+          ( i
+          , Ast.Stmt.Measure
+              {measure = measure, arg = arg, into = into, semicolon = semicolon}
+          )
+        end
+
+
+      (* barrier [operand, ...] ;
+       *        ^ 
+       *)
+      fun parse_barrier i =
+        let
+          val barrier = tok (i - 1)
+
+          val (i, {elems, delims}) = parse_operands i
+          val (i, semicolon) = parse_reserved Token.Semicolon i
+        in
+          ( i
+          , Ast.Stmt.Barrier
+              { barrier = barrier
+              , elems = elems
+              , delims = delims
+              , semicolon = semicolon
+              }
+          )
+        end
+
+
       fun parse_stmt i =
         if isReserved Token.Include i then
           parse_include (i + 1)
         else if isReserved Token.Qreg i orelse isReserved Token.Creg i then
           parse_oldStyleDeclare (i + 1)
+        else if isReserved Token.Measure i then
+          parse_measure (i + 1)
+        else if isReserved Token.Barrier i then
+          parse_barrier (i + 1)
         else if check Token.isIdentifier i then
           parse_gateCall (i + 1)
         else

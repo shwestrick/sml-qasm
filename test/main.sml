@@ -62,10 +62,14 @@ val _ =
     val source = Source.loadFromFile (FilePath.fromUnixPath inputName)
     val tokens = Lexer.tokens source handle exn => handleLexOrParseError exn
     val ast = Parser.parse tokens handle exn => handleLexOrParseError exn
+    val parsed = Ast.toString ast
     val highlighted = SyntaxHighlighter.highlight source
                       handle exn => handleLexOrParseError exn
   in
     TCS.print highlighted;
+    print "\n";
+    print "==============================================================\n";
+    print parsed;
     print "\n"
   end
   handle exn =>

@@ -6,6 +6,7 @@ local
   ast/sources.mpl.mlb
   parse/sources.mpl.mlb
   syntax-highlighting/sources.mpl.mlb
+  simple-circuit/sources.mpl.mlb
 in
   structure Error
   structure TerminalColors
@@ -17,4 +18,5 @@ in
   structure Parser
   structure Ast
   structure SyntaxHighlighter
+  structure SimpleCircuit
 end

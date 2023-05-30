@@ -65,12 +65,15 @@ val _ =
     val parsed = Ast.toString ast
     val highlighted = SyntaxHighlighter.highlight source
                       handle exn => handleLexOrParseError exn
+
+    val simplified = SimpleCircuit.toString (SimpleCircuit.fromAst ast)
   in
     TCS.print highlighted;
     print "\n";
     print "==============================================================\n";
     print parsed;
-    print "\n"
+    print "==============================================================\n";
+    print simplified
   end
   handle exn =>
     ( TCS.printErr (boldc Palette.red (exnToString exn ^ "\n"))

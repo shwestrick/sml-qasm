@@ -6,6 +6,7 @@
 structure Parser:
 sig
   val parse: Token.t Seq.t -> Ast.t
+  val parseFromFile: string -> Ast.t
 end =
 struct
   structure PC = ParserCombinators
@@ -425,6 +426,14 @@ struct
 
     in
       parse_ast 0
+    end
+
+
+  (* ====================================================================== *)
+
+  fun parseFromFile path =
+    let val source = Source.loadFromFile (FilePath.fromUnixPath path)
+    in parse (Lexer.tokens source)
     end
 
 end

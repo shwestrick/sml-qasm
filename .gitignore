@@ -1,4 +1,5 @@
 .vscode/
 test/main.mlton
 test/main.mpl
+test/main.mlton.dbg
 lib/github.com/mpllang/
